@@ -329,7 +329,7 @@ function init() {
 function renderPresetDropdown() {
   const current = $preset.value;
   $preset.innerHTML = '<option value="">— no preset —</option>';
-  $settingsPresetSelect.innerHTML = '<option value="">— select to load —</option>';
+  $settingsPresetSelect.innerHTML = '<option value="">— select to load —</option><option value="__new__">— new preset —</option>';
   presets.forEach(p => {
     const opt1 = document.createElement('option');
     opt1.value = p.id; opt1.textContent = p.name;
