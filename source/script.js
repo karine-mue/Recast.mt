@@ -27,6 +27,7 @@ const MODE_CONFIG = {
   yaml:                { instruction: 'YAML形式として出力する',                            outputFormat: 'text' },
   table:               { instruction: 'テーブル形式（マークダウン）として出力する',          outputFormat: 'text' },
   pseudo_code:         { instruction: '疑似コード形式として出力する',                       outputFormat: 'text' },
+  markdown:            { instruction: 'Markdown形式として出力する',                          outputFormat: 'text' },
   // language
   translate:           { instruction: '入力テキストを指定言語に翻訳する。意味・ニュアンスを保持する。', outputFormat: 'text' },
 };
