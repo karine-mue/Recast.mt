@@ -29,6 +29,7 @@ const MODELS = {
 // ── STATE ─────────────────────────────────────────────────
 let presets = [];
 let currentPresetId = null;
+let selectedMode = 'bulletize';
 
 // ── STORAGE ───────────────────────────────────────────────
 function loadPresets() {
@@ -68,7 +69,8 @@ const $saveKeysBtn   = document.getElementById('save-keys-btn');
 const $presetName    = document.getElementById('preset-name');
 const $presetProvider= document.getElementById('preset-provider');
 const $presetModel   = document.getElementById('preset-model');
-const $presetSystem  = document.getElementById('preset-system');
+const $selectedModeLabel = document.getElementById('selected-mode-label');
+const $presetLanguage  = document.getElementById('preset-language');
 const $presetTemp    = document.getElementById('preset-temp');
 const $presetTempVal = document.getElementById('preset-temp-val');
 const $presetTokens  = document.getElementById('preset-tokens');
@@ -133,7 +135,8 @@ function loadPresetIntoForm(id) {
   $presetName.value     = p.name;
   $presetProvider.value = p.provider;
   updateModelOptions(p.provider, p.model);
-  $presetSystem.value   = p.systemPrompt;
+  setActiveMode(p.transformMode || 'bulletize');
+  $presetLanguage.value = p.language || 'ja';
   $presetTemp.value     = p.temperature;
   $presetTempVal.textContent = p.temperature.toFixed(1);
   $presetTokens.value   = p.maxTokens;
@@ -143,7 +146,8 @@ function clearPresetForm() {
   $presetName.value     = '';
   $presetProvider.value = 'anthropic';
   updateModelOptions('anthropic');
-  $presetSystem.value   = '';
+  setActiveMode('bulletize');
+  $presetLanguage.value = 'ja';
   $presetTemp.value     = 0.7;
   $presetTempVal.textContent = '0.7';
   $presetTokens.value   = 1000;
@@ -167,7 +171,8 @@ function getFormData() {
     name:        $presetName.value.trim() || 'preset',
     provider:    $presetProvider.value,
     model:       $presetModel.value,
-    systemPrompt:$presetSystem.value.trim(),
+    transformMode: selectedMode,
+    language:      $presetLanguage.value,
     temperature: parseFloat($presetTemp.value),
     maxTokens:   parseInt($presetTokens.value) || 1000,
   };
@@ -192,7 +197,7 @@ async function callAnthropic(key, preset, inputText) {
     temperature: preset.temperature,
     messages: [{ role: 'user', content: inputText }]
   };
-  if (preset.systemPrompt) body.system = preset.systemPrompt;
+  body.system = buildSystemPrompt(preset.transformMode || 'bulletize', preset.language || 'ja');
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -211,7 +216,7 @@ async function callAnthropic(key, preset, inputText) {
 
 async function callOpenAI(key, preset, inputText) {
   const messages = [];
-  if (preset.systemPrompt) messages.push({ role: 'system', content: preset.systemPrompt });
+  messages.push({ role: 'system', content: buildSystemPrompt(preset.transformMode || 'bulletize', preset.language || 'ja') });
   messages.push({ role: 'user', content: inputText });
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -234,9 +239,7 @@ async function callOpenAI(key, preset, inputText) {
 }
 
 async function callGemini(key, preset, inputText) {
-  const combinedText = preset.systemPrompt
-    ? `${preset.systemPrompt}\n\n${inputText}`
-    : inputText;
+  const combinedText = `${buildSystemPrompt(preset.transformMode || 'bulletize', preset.language || 'ja')}\n\n${inputText}`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${preset.model}:generateContent?key=${key}`;
 
@@ -264,6 +267,54 @@ async function parseApiError(res) {
   const msg = err?.error?.message || err?.message || '';
   return `ERROR: ${res.status}${msg ? ' — ' + msg : ''}`;
 }
+
+
+// ── MODE BUTTONS ──────────────────────────────────────────
+const MODE_INSTRUCTIONS = {
+  summarize:           '主要な情報のみを抽出し、短縮して出力する',
+  expand:              '各要素を詳細に展開して出力する',
+  outline:             '階層的なアウトライン構造として出力する',
+  bulletize:           '箇条書き形式として出力する（評価語なし）',
+  compress:            '最小の語数で意味を保持して出力する',
+  formalize:           '形式的・公式な文体に変換して出力する',
+  simplify:            '平易な語彙と構造に変換して出力する',
+  abstract:            '具体的な詳細を除去し、抽象的な記述として出力する',
+  extract_claims:      '明示的・暗示的な主張のみを列挙する',
+  extract_assumptions: '前提として置かれている事柄を列挙する',
+  extract_structure:   '論理構造・関係性を記述する',
+  remove_evaluation:   '評価語・感情語を除去し、事実記述のみを残す',
+  neutralize:          '立場・価値判断を除去し、中立的な記述に変換する',
+  invert:              '論旨・立場を反転して出力する',
+  json:                'JSON形式として出力する',
+  yaml:                'YAML形式として出力する',
+  table:               'テーブル形式（マークダウン）として出力する',
+  pseudo_code:         '疑似コード形式として出力する',
+  translate:           '入力テキストを指定言語に翻訳する。意味・ニュアンスを保持する。',
+};
+
+function buildSystemPrompt(mode, language = 'ja') {
+  const langInstruction = language === 'en'
+    ? 'Output in English.'
+    : '出力は日本語で行う。';
+  return `非人格的変換器として機能する。
+transform_mode: ${mode}
+instruction: ${MODE_INSTRUCTIONS[mode] || mode}を実行する。
+${langInstruction}
+禁止: 一人称・評価語・感情語・末尾質問・対話継続誘導・共感表現。
+原則: 入力の意味領域を超えない。新規主張を追加しない。出力のみを返す。`;
+}
+
+function setActiveMode(mode) {
+  selectedMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === mode);
+  });
+  if ($selectedModeLabel) $selectedModeLabel.textContent = mode;
+}
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => setActiveMode(btn.dataset.mode));
+});
 
 // ── EVENT HANDLERS ────────────────────────────────────────
 $preset.addEventListener('change', () => {
