@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Recast.mt</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+<header id="header">
+  <div class="header-title">Recast.mt</div>
+  <button class="icon-btn" id="settings-btn" title="settings">⚙</button>
+</header>
+
+<main id="main">
+
+  <div id="preset-bar">
+    <span class="field-label">preset</span>
+    <select id="preset-select">
+      <option value="">— no preset —</option>
+    </select>
+  </div>
+
+  <div id="status-bar">
+    <div>chars: <span id="status-chars">0</span></div>
+    <div>preset: <span id="status-preset">none</span></div>
+    <div>status: <span id="status-state">READY</span></div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">INPUT</div>
+    <textarea
+      id="input-text"
+      class="input-area"
+      placeholder="変換対象テキストを入力"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false"
+    ></textarea>
+  </div>
+
+  <div class="section">
+    <div class="section-label">OUTPUT</div>
+    <div id="output-area" class="empty">出力がここに表示される</div>
+  </div>
+
+</main>
+
+<div id="bottom-bar">
+  <button class="copy-btn" id="copy-btn">copy</button>
+  <button class="convert-btn" id="convert-btn">CONVERT</button>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <div class="modal-head">
+      SETTINGS
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- API KEYS -->
+      <div class="modal-section">
+        <div class="modal-section-title">API KEYS</div>
+        <div class="field">
+          <label>Anthropic API Key</label>
+          <input type="password" id="ant-key" placeholder="sk-ant-..." autocomplete="off">
+        </div>
+        <div class="field">
+          <label>OpenAI API Key</label>
+          <input type="password" id="oai-key" placeholder="sk-..." autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Gemini API Key</label>
+          <input type="password" id="gem-key" placeholder="AIza..." autocomplete="off">
+        </div>
+        <div class="preset-actions">
+          <button class="action-btn primary" id="save-keys-btn">save keys</button>
+        </div>
+      </div>
+
+      <!-- PRESET EDITOR -->
+      <div class="modal-section">
+        <div class="modal-section-title">PRESET</div>
+
+        <div class="field">
+          <label>name</label>
+          <input type="text" id="preset-name" placeholder="preset name" maxlength="40">
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>provider</label>
+            <select id="preset-provider">
+              <option value="anthropic">anthropic</option>
+              <option value="openai">openai</option>
+              <option value="gemini">gemini</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>model</label>
+            <select id="preset-model"></select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>system prompt</label>
+          <textarea id="preset-system" placeholder="非人格的変換器として機能する。&#10;一人称・評価語・感情語・末尾質問を禁止。&#10;入力の意味領域を超えない。新規主張を追加しない。"></textarea>
+        </div>
+
+        <div class="field">
+          <label>temperature</label>
+          <div class="slider-row">
+            <input type="range" id="preset-temp" min="0" max="2" step="0.1" value="0.7">
+            <span class="slider-val" id="preset-temp-val">0.7</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>max_tokens</label>
+          <input type="number" id="preset-tokens" min="100" max="8000" value="1000">
+        </div>
+
+        <div class="preset-actions">
+          <button class="action-btn primary" id="preset-save-new">save new</button>
+          <button class="action-btn" id="preset-overwrite" style="display:none">overwrite</button>
+          <button class="action-btn danger" id="preset-delete" style="display:none">delete</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="./script.js"></script>
+</body>
+</html>
