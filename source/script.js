@@ -507,6 +507,11 @@ $settingsBtn.addEventListener('click', () => {
 $settingsPresetSelect.addEventListener('change', () => {
   const id = $settingsPresetSelect.value;
   if (!id) return;
+  if (id === '__new__') {
+    clearPresetForm();
+    $settingsPresetSelect.value = '__new__';
+    return;
+  }
   selectPreset(id);
   loadPresetIntoForm(id);
   $preset.value = id;
