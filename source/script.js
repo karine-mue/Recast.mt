@@ -1,6 +1,206 @@
 'use strict';
 
-// ── CONSTANTS ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// TRANSFORM LAYER
+// buildTransformSpec — API仕様を知らない。mode→specへの変換のみ。
+// ═══════════════════════════════════════════════════════════
+
+const MODE_INSTRUCTIONS = {
+  // structural
+  summarize:           '主要な情報のみを抽出し、短縮して出力する',
+  expand:              '各要素を詳細に展開して出力する',
+  outline:             '階層的なアウトライン構造として出力する',
+  bulletize:           '箇条書き形式として出力する（評価語なし）',
+  compress:            '最小の語数で意味を保持して出力する',
+  formalize:           '形式的・公式な文体に変換して出力する',
+  simplify:            '平易な語彙と構造に変換して出力する',
+  abstract:            '具体的な詳細を除去し、抽象的な記述として出力する',
+  // semantic
+  extract_claims:      '明示的・暗示的な主張のみを列挙する',
+  extract_assumptions: '前提として置かれている事柄を列挙する',
+  extract_structure:   '論理構造・関係性を記述する',
+  remove_evaluation:   '評価語・感情語を除去し、事実記述のみを残す',
+  neutralize:          '立場・価値判断を除去し、中立的な記述に変換する',
+  invert:              '論旨・立場を反転して出力する',
+  // format
+  json:                'JSON形式として出力する',
+  yaml:                'YAML形式として出力する',
+  table:               'テーブル形式（マークダウン）として出力する',
+  pseudo_code:         '疑似コード形式として出力する',
+  // language
+  translate:           '入力テキストを指定言語に翻訳する。意味・ニュアンスを保持する。',
+};
+
+const FORMAT_MODES = new Set(['json', 'yaml', 'table', 'pseudo_code']);
+
+/**
+ * @returns {TransformSpec}
+ * {
+ *   mode: string,
+ *   instruction: string,
+ *   outputLanguage: string,
+ *   outputFormat: "text" | "json",
+ *   generation: { temperature: number, maxTokens: number }
+ * }
+ */
+function buildTransformSpec(preset) {
+  const mode     = preset.transformMode || 'bulletize';
+  const language = preset.language || 'ja';
+  const isJson   = mode === 'json';
+
+  const langLine = language === 'en'
+    ? 'Output in English.'
+    : '出力は日本語で行う。';
+
+  const jsonLine = isJson
+    ? '\nOutput must be valid JSON only. No markdown fences. No explanation.'
+    : '';
+
+  const instruction = [
+    '非人格的変換器として機能する。',
+    `transform_mode: ${mode}`,
+    `instruction: ${MODE_INSTRUCTIONS[mode] || mode}を実行する。`,
+    langLine,
+    '禁止: 一人称・評価語・感情語・末尾質問・対話継続誘導・共感表現。',
+    '原則: 入力の意味領域を超えない。新規主張を追加しない。出力のみを返す。',
+    jsonLine,
+  ].filter(Boolean).join('\n');
+
+  return {
+    mode,
+    instruction,
+    outputLanguage: language,
+    outputFormat:   isJson ? 'json' : 'text',
+    generation: {
+      temperature: preset.temperature ?? 0.7,
+      maxTokens:   preset.maxTokens   ?? 1000,
+    },
+  };
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// ADAPTER LAYER
+// 各Adapterの責務: spec を各社APIのネイティブ構造に射影する
+// ═══════════════════════════════════════════════════════════
+
+const anthropicAdapter = {
+  async send(spec, inputText, apiKey) {
+    const body = {
+      model:       this.model,
+      max_tokens:  spec.generation.maxTokens,
+      temperature: spec.generation.temperature,
+      system:      spec.instruction,
+      messages:    [{ role: 'user', content: inputText }],
+    };
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type':    'application/json',
+        'x-api-key':       apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) throw new Error(await parseHttpError(res));
+    const data = await res.json();
+    return data.content?.[0]?.text || '';
+  },
+};
+
+const openaiAdapter = {
+  async send(spec, inputText, apiKey) {
+    const body = {
+      model:       this.model,
+      temperature: spec.generation.temperature,
+      max_tokens:  spec.generation.maxTokens,
+      messages: [
+        { role: 'system', content: spec.instruction },
+        { role: 'user',   content: inputText },
+      ],
+    };
+
+    if (spec.outputFormat === 'json') {
+      body.response_format = { type: 'json_object' };
+    }
+
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) throw new Error(await parseHttpError(res));
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || '';
+  },
+};
+
+const geminiAdapter = {
+  async send(spec, inputText, apiKey) {
+    const generationConfig = {
+      temperature:     spec.generation.temperature,
+      maxOutputTokens: spec.generation.maxTokens,
+    };
+
+    if (spec.outputFormat === 'json') {
+      generationConfig.responseMimeType = 'application/json';
+    }
+
+    const body = {
+      systemInstruction: { parts: [{ text: spec.instruction }] },
+      contents: [{ role: 'user', parts: [{ text: inputText }] }],
+      generationConfig,
+    };
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${apiKey}`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) throw new Error(await parseHttpError(res));
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  },
+};
+
+const ADAPTERS = {
+  anthropic: anthropicAdapter,
+  openai:    openaiAdapter,
+  gemini:    geminiAdapter,
+};
+
+
+// ═══════════════════════════════════════════════════════════
+// RESPONSE LAYER
+// ═══════════════════════════════════════════════════════════
+
+async function parseHttpError(res) {
+  const err = await res.json().catch(() => ({}));
+  if (res.status === 401) return 'ERROR: 401 — API key invalid';
+  if (res.status === 429) return 'ERROR: 429 — rate limit exceeded';
+  const msg = err?.error?.message || err?.message || '';
+  return `ERROR: ${res.status}${msg ? ' — ' + msg : ''}`;
+}
+
+function normalizeResponse(text, spec) {
+  if (!text) return 'ERROR: empty response';
+  return text.trim();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════
+
 const PRESETS_KEY   = 'recast_presets';
 const OAI_KEY_STORE = 'openai_api_key';
 const ANT_KEY_STORE = 'anthropic_api_key';
@@ -26,12 +226,20 @@ const MODELS = {
   ],
 };
 
-// ── STATE ─────────────────────────────────────────────────
-let presets = [];
-let currentPresetId = null;
-let selectedMode = 'bulletize';
 
-// ── STORAGE ───────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+
+let presets        = [];
+let currentPresetId = null;
+let selectedMode   = 'bulletize';
+
+
+// ═══════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════
+
 function loadPresets() {
   try { presets = JSON.parse(localStorage.getItem(PRESETS_KEY)) || []; }
   catch { presets = []; }
@@ -48,38 +256,46 @@ function getApiKey(provider) {
   return key;
 }
 
-// ── DOM ───────────────────────────────────────────────────
-const $preset        = document.getElementById('preset-select');
-const $input         = document.getElementById('input-text');
-const $output        = document.getElementById('output-area');
-const $convertBtn    = document.getElementById('convert-btn');
-const $copyBtn       = document.getElementById('copy-btn');
-const $settingsBtn   = document.getElementById('settings-btn');
-const $settingsModal = document.getElementById('settings-modal');
-const $modalClose    = document.getElementById('modal-close');
-const $statusChars   = document.getElementById('status-chars');
-const $statusPreset  = document.getElementById('status-preset');
-const $statusState   = document.getElementById('status-state');
 
-const $oaiKey        = document.getElementById('oai-key');
-const $antKey        = document.getElementById('ant-key');
-const $gemKey        = document.getElementById('gem-key');
-const $saveKeysBtn   = document.getElementById('save-keys-btn');
+// ═══════════════════════════════════════════════════════════
+// DOM REFS
+// ═══════════════════════════════════════════════════════════
 
-const $presetName    = document.getElementById('preset-name');
-const $presetProvider= document.getElementById('preset-provider');
-const $presetModel   = document.getElementById('preset-model');
+const $preset         = document.getElementById('preset-select');
+const $input          = document.getElementById('input-text');
+const $output         = document.getElementById('output-area');
+const $convertBtn     = document.getElementById('convert-btn');
+const $copyBtn        = document.getElementById('copy-btn');
+const $settingsBtn    = document.getElementById('settings-btn');
+const $settingsModal  = document.getElementById('settings-modal');
+const $modalClose     = document.getElementById('modal-close');
+const $statusChars    = document.getElementById('status-chars');
+const $statusPreset   = document.getElementById('status-preset');
+const $statusState    = document.getElementById('status-state');
+
+const $oaiKey         = document.getElementById('oai-key');
+const $antKey         = document.getElementById('ant-key');
+const $gemKey         = document.getElementById('gem-key');
+const $saveKeysBtn    = document.getElementById('save-keys-btn');
+
+const $presetName     = document.getElementById('preset-name');
+const $presetProvider = document.getElementById('preset-provider');
+const $presetModel    = document.getElementById('preset-model');
+const $presetLanguage = document.getElementById('preset-language');
+const $presetTemp     = document.getElementById('preset-temp');
+const $presetTempVal  = document.getElementById('preset-temp-val');
+const $presetTokens   = document.getElementById('preset-tokens');
 const $selectedModeLabel = document.getElementById('selected-mode-label');
-const $presetLanguage  = document.getElementById('preset-language');
-const $presetTemp    = document.getElementById('preset-temp');
-const $presetTempVal = document.getElementById('preset-temp-val');
-const $presetTokens  = document.getElementById('preset-tokens');
 
-const $saveNewBtn    = document.getElementById('preset-save-new');
-const $overwriteBtn  = document.getElementById('preset-overwrite');
-const $deleteBtn     = document.getElementById('preset-delete');
+const $saveNewBtn     = document.getElementById('preset-save-new');
+const $overwriteBtn   = document.getElementById('preset-overwrite');
+const $deleteBtn      = document.getElementById('preset-delete');
 
-// ── INIT ──────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+
 function init() {
   loadPresets();
   updateModelOptions('anthropic');
@@ -96,7 +312,11 @@ function init() {
   }
 }
 
-// ── PRESET DROPDOWN ───────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════
+// PRESET UI
+// ═══════════════════════════════════════════════════════════
+
 function renderPresetDropdown() {
   const current = $preset.value;
   $preset.innerHTML = '<option value="">— no preset —</option>';
@@ -128,29 +348,28 @@ function updatePresetActionBtns() {
   $deleteBtn.style.display    = has ? '' : 'none';
 }
 
-// ── PRESET FORM ───────────────────────────────────────────
 function loadPresetIntoForm(id) {
   const p = presets.find(p => p.id === id);
   if (!p) { clearPresetForm(); return; }
   $presetName.value     = p.name;
   $presetProvider.value = p.provider;
   updateModelOptions(p.provider, p.model);
-  setActiveMode(p.transformMode || 'bulletize');
   $presetLanguage.value = p.language || 'ja';
   $presetTemp.value     = p.temperature;
   $presetTempVal.textContent = p.temperature.toFixed(1);
   $presetTokens.value   = p.maxTokens;
+  setActiveMode(p.transformMode || 'bulletize');
 }
 
 function clearPresetForm() {
   $presetName.value     = '';
   $presetProvider.value = 'anthropic';
   updateModelOptions('anthropic');
-  setActiveMode('bulletize');
   $presetLanguage.value = 'ja';
   $presetTemp.value     = 0.7;
   $presetTempVal.textContent = '0.7';
   $presetTokens.value   = 1000;
+  setActiveMode('bulletize');
 }
 
 function updateModelOptions(provider, selectedModel) {
@@ -168,141 +387,20 @@ function updateModelOptions(provider, selectedModel) {
 
 function getFormData() {
   return {
-    name:        $presetName.value.trim() || 'preset',
-    provider:    $presetProvider.value,
-    model:       $presetModel.value,
+    name:          $presetName.value.trim() || 'preset',
+    provider:      $presetProvider.value,
+    model:         $presetModel.value,
     transformMode: selectedMode,
     language:      $presetLanguage.value,
-    temperature: parseFloat($presetTemp.value),
-    maxTokens:   parseInt($presetTokens.value) || 1000,
+    temperature:   parseFloat($presetTemp.value),
+    maxTokens:     parseInt($presetTokens.value) || 1000,
   };
 }
 
-// ── API ───────────────────────────────────────────────────
-async function callApi(preset, inputText) {
-  const key = getApiKey(preset.provider);
 
-  switch (preset.provider) {
-    case 'anthropic': return callAnthropic(key, preset, inputText);
-    case 'openai':    return callOpenAI(key, preset, inputText);
-    case 'gemini':    return callGemini(key, preset, inputText);
-    default: throw new Error(`ERROR: unsupported provider: ${preset.provider}`);
-  }
-}
-
-async function callAnthropic(key, preset, inputText) {
-  const body = {
-    model: preset.model,
-    max_tokens: preset.maxTokens,
-    temperature: preset.temperature,
-    messages: [{ role: 'user', content: inputText }]
-  };
-  body.system = buildSystemPrompt(preset.transformMode || 'bulletize', preset.language || 'ja');
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) throw new Error(await parseApiError(res));
-  const data = await res.json();
-  return data.content?.[0]?.text || '';
-}
-
-async function callOpenAI(key, preset, inputText) {
-  const messages = [];
-  messages.push({ role: 'system', content: buildSystemPrompt(preset.transformMode || 'bulletize', preset.language || 'ja') });
-  messages.push({ role: 'user', content: inputText });
-
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`,
-    },
-    body: JSON.stringify({
-      model: preset.model,
-      messages,
-      temperature: preset.temperature,
-      max_tokens: preset.maxTokens,
-    })
-  });
-
-  if (!res.ok) throw new Error(await parseApiError(res));
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '';
-}
-
-async function callGemini(key, preset, inputText) {
-  const combinedText = `${buildSystemPrompt(preset.transformMode || 'bulletize', preset.language || 'ja')}\n\n${inputText}`;
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${preset.model}:generateContent?key=${key}`;
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: combinedText }] }],
-      generationConfig: {
-        temperature: preset.temperature,
-        maxOutputTokens: preset.maxTokens,
-      }
-    })
-  });
-
-  if (!res.ok) throw new Error(await parseApiError(res));
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-}
-
-async function parseApiError(res) {
-  const err = await res.json().catch(() => ({}));
-  if (res.status === 401) return 'ERROR: 401 — API key invalid';
-  if (res.status === 429) return 'ERROR: 429 — rate limit exceeded';
-  const msg = err?.error?.message || err?.message || '';
-  return `ERROR: ${res.status}${msg ? ' — ' + msg : ''}`;
-}
-
-
-// ── MODE BUTTONS ──────────────────────────────────────────
-const MODE_INSTRUCTIONS = {
-  summarize:           '主要な情報のみを抽出し、短縮して出力する',
-  expand:              '各要素を詳細に展開して出力する',
-  outline:             '階層的なアウトライン構造として出力する',
-  bulletize:           '箇条書き形式として出力する（評価語なし）',
-  compress:            '最小の語数で意味を保持して出力する',
-  formalize:           '形式的・公式な文体に変換して出力する',
-  simplify:            '平易な語彙と構造に変換して出力する',
-  abstract:            '具体的な詳細を除去し、抽象的な記述として出力する',
-  extract_claims:      '明示的・暗示的な主張のみを列挙する',
-  extract_assumptions: '前提として置かれている事柄を列挙する',
-  extract_structure:   '論理構造・関係性を記述する',
-  remove_evaluation:   '評価語・感情語を除去し、事実記述のみを残す',
-  neutralize:          '立場・価値判断を除去し、中立的な記述に変換する',
-  invert:              '論旨・立場を反転して出力する',
-  json:                'JSON形式として出力する',
-  yaml:                'YAML形式として出力する',
-  table:               'テーブル形式（マークダウン）として出力する',
-  pseudo_code:         '疑似コード形式として出力する',
-  translate:           '入力テキストを指定言語に翻訳する。意味・ニュアンスを保持する。',
-};
-
-function buildSystemPrompt(mode, language = 'ja') {
-  const langInstruction = language === 'en'
-    ? 'Output in English.'
-    : '出力は日本語で行う。';
-  return `非人格的変換器として機能する。
-transform_mode: ${mode}
-instruction: ${MODE_INSTRUCTIONS[mode] || mode}を実行する。
-${langInstruction}
-禁止: 一人称・評価語・感情語・末尾質問・対話継続誘導・共感表現。
-原則: 入力の意味領域を超えない。新規主張を追加しない。出力のみを返す。`;
-}
+// ═══════════════════════════════════════════════════════════
+// MODE BUTTONS
+// ═══════════════════════════════════════════════════════════
 
 function setActiveMode(mode) {
   selectedMode = mode;
@@ -316,7 +414,11 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
   btn.addEventListener('click', () => setActiveMode(btn.dataset.mode));
 });
 
-// ── EVENT HANDLERS ────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════
+// EVENT HANDLERS
+// ═══════════════════════════════════════════════════════════
+
 $preset.addEventListener('change', () => {
   selectPreset($preset.value);
   if ($preset.value) loadPresetIntoForm($preset.value);
@@ -333,8 +435,12 @@ $convertBtn.addEventListener('click', async () => {
   const preset = presets.find(p => p.id === currentPresetId);
   if (!preset) { setOutput('ERROR: no preset selected', 'error'); return; }
 
-  try { getApiKey(preset.provider); }
+  let apiKey;
+  try { apiKey = getApiKey(preset.provider); }
   catch { setOutput('ERROR: API key not set — open ⚙ settings', 'error'); return; }
+
+  const adapter = ADAPTERS[preset.provider];
+  if (!adapter) { setOutput(`ERROR: unknown provider: ${preset.provider}`, 'error'); return; }
 
   $convertBtn.disabled = true;
   $statusState.textContent = 'PROCESSING';
@@ -342,7 +448,10 @@ $convertBtn.addEventListener('click', async () => {
   $output.innerHTML = '<span class="cursor"></span>';
 
   try {
-    const result = await callApi(preset, text);
+    const spec   = buildTransformSpec(preset);
+    adapter.model = preset.model;
+    const raw    = await adapter.send(spec, text, apiKey);
+    const result = normalizeResponse(raw, spec);
     setOutput(result, '');
     $statusState.textContent = 'DONE';
   } catch (err) {
@@ -403,7 +512,7 @@ $presetTemp.addEventListener('input', () => {
 
 $saveNewBtn.addEventListener('click', () => {
   const data = getFormData();
-  const now = Date.now();
+  const now  = Date.now();
   const newPreset = { id: crypto.randomUUID(), ...data, createdAt: now, updatedAt: now };
   presets.push(newPreset);
   savePresetsToStorage();
@@ -437,5 +546,9 @@ $deleteBtn.addEventListener('click', () => {
   updatePresetActionBtns();
 });
 
-// ── BOOT ──────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════
+
 init();
