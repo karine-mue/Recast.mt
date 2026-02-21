@@ -214,11 +214,11 @@ const ANT_KEY_STORE = 'anthropic_api_key';
 const GEM_KEY_STORE = 'gemini_api_key';
 
 const MODELS = {
-  anthropic: [
-    'claude-opus-4-5',
-    'claude-sonnet-4-5',
-    'claude-haiku-4-5-20251001',
-  ],
+  // anthropic: [  // CORS未解決 — 帰宅後にWorker設定で有効化
+  //   'claude-opus-4-5',
+  //   'claude-sonnet-4-5',
+  //   'claude-haiku-4-5-20251001',
+  // ],
   openai: [
     'gpt-4o',
     'gpt-4o-mini',
@@ -228,8 +228,8 @@ const MODELS = {
   gemini: [
     'gemini-2.0-flash',
     'gemini-2.0-flash-lite',
-    'gemini-1.5-pro',
-    'gemini-1.5-flash',
+    // 'gemini-1.5-pro',   // 404 — エンドポイント要確認
+    // 'gemini-1.5-flash', // 404 — エンドポイント要確認
   ],
 };
 
@@ -381,6 +381,7 @@ function clearPresetForm() {
 
 function updateModelOptions(provider, selectedModel) {
   const models = MODELS[provider] || [];
+  if (!models.length) return; // provider未対応（コメントアウト中）
   $presetModel.innerHTML = '';
   models.forEach(m => {
     const opt = document.createElement('option');
@@ -459,7 +460,7 @@ $convertBtn.addEventListener('click', async () => {
     const raw    = await adapter.send(spec, text, apiKey, preset.model);
     const result = normalizeResponse(raw, spec);
     setOutput(result, '');
-    $statusState.textContent = 'DONE';
+    $statusState.textContent = `DONE [${preset.provider}/${preset.model}]`;
   } catch (err) {
     setOutput(err.message, 'error');
     $statusState.textContent = 'ERROR';
