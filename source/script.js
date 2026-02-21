@@ -5,33 +5,31 @@
 // buildTransformSpec — API仕様を知らない。mode→specへの変換のみ。
 // ═══════════════════════════════════════════════════════════
 
-const MODE_INSTRUCTIONS = {
+const MODE_CONFIG = {
   // structural
-  summarize:           '主要な情報のみを抽出し、短縮して出力する',
-  expand:              '各要素を詳細に展開して出力する',
-  outline:             '階層的なアウトライン構造として出力する',
-  bulletize:           '箇条書き形式として出力する（評価語なし）',
-  compress:            '最小の語数で意味を保持して出力する',
-  formalize:           '形式的・公式な文体に変換して出力する',
-  simplify:            '平易な語彙と構造に変換して出力する',
-  abstract:            '具体的な詳細を除去し、抽象的な記述として出力する',
+  summarize:           { instruction: '主要な情報のみを抽出し、短縮して出力する',          outputFormat: 'text' },
+  expand:              { instruction: '各要素を詳細に展開して出力する',                    outputFormat: 'text' },
+  outline:             { instruction: '階層的なアウトライン構造として出力する',              outputFormat: 'text' },
+  bulletize:           { instruction: '箇条書き形式として出力する（評価語なし）',            outputFormat: 'text' },
+  compress:            { instruction: '最小の語数で意味を保持して出力する',                 outputFormat: 'text' },
+  formalize:           { instruction: '形式的・公式な文体に変換して出力する',               outputFormat: 'text' },
+  simplify:            { instruction: '平易な語彙と構造に変換して出力する',                 outputFormat: 'text' },
+  abstract:            { instruction: '具体的な詳細を除去し、抽象的な記述として出力する',   outputFormat: 'text' },
   // semantic
-  extract_claims:      '明示的・暗示的な主張のみを列挙する',
-  extract_assumptions: '前提として置かれている事柄を列挙する',
-  extract_structure:   '論理構造・関係性を記述する',
-  remove_evaluation:   '評価語・感情語を除去し、事実記述のみを残す',
-  neutralize:          '立場・価値判断を除去し、中立的な記述に変換する',
-  invert:              '論旨・立場を反転して出力する',
+  extract_claims:      { instruction: '明示的・暗示的な主張のみを列挙する',                 outputFormat: 'text' },
+  extract_assumptions: { instruction: '前提として置かれている事柄を列挙する',               outputFormat: 'text' },
+  extract_structure:   { instruction: '論理構造・関係性を記述する',                        outputFormat: 'text' },
+  remove_evaluation:   { instruction: '評価語・感情語を除去し、事実記述のみを残す',         outputFormat: 'text' },
+  neutralize:          { instruction: '立場・価値判断を除去し、中立的な記述に変換する',     outputFormat: 'text' },
+  invert:              { instruction: '論旨・立場を反転して出力する',                       outputFormat: 'text' },
   // format
-  json:                'JSON形式として出力する',
-  yaml:                'YAML形式として出力する',
-  table:               'テーブル形式（マークダウン）として出力する',
-  pseudo_code:         '疑似コード形式として出力する',
+  json:                { instruction: 'JSON形式として出力する',                            outputFormat: 'json' },
+  yaml:                { instruction: 'YAML形式として出力する',                            outputFormat: 'text' },
+  table:               { instruction: 'テーブル形式（マークダウン）として出力する',          outputFormat: 'text' },
+  pseudo_code:         { instruction: '疑似コード形式として出力する',                       outputFormat: 'text' },
   // language
-  translate:           '入力テキストを指定言語に翻訳する。意味・ニュアンスを保持する。',
+  translate:           { instruction: '入力テキストを指定言語に翻訳する。意味・ニュアンスを保持する。', outputFormat: 'text' },
 };
-
-const FORMAT_MODES = new Set(['json', 'yaml', 'table', 'pseudo_code']);
 
 /**
  * @returns {TransformSpec}
@@ -46,20 +44,20 @@ const FORMAT_MODES = new Set(['json', 'yaml', 'table', 'pseudo_code']);
 function buildTransformSpec(preset) {
   const mode     = preset.transformMode || 'bulletize';
   const language = preset.language || 'ja';
-  const isJson   = mode === 'json';
+  const config   = MODE_CONFIG[mode] || { instruction: mode, outputFormat: 'text' };
 
   const langLine = language === 'en'
     ? 'Output in English.'
     : '出力は日本語で行う。';
 
-  const jsonLine = isJson
+  const jsonLine = config.outputFormat === 'json'
     ? '\nOutput must be valid JSON only. No markdown fences. No explanation.'
     : '';
 
   const instruction = [
     '非人格的変換器として機能する。',
     `transform_mode: ${mode}`,
-    `instruction: ${MODE_INSTRUCTIONS[mode] || mode}を実行する。`,
+    `instruction: ${config.instruction}を実行する。`,
     langLine,
     '禁止: 一人称・評価語・感情語・末尾質問・対話継続誘導・共感表現。',
     '原則: 入力の意味領域を超えない。新規主張を追加しない。出力のみを返す。',
@@ -70,10 +68,10 @@ function buildTransformSpec(preset) {
     mode,
     instruction,
     outputLanguage: language,
-    outputFormat:   isJson ? 'json' : 'text',
+    outputFormat:   config.outputFormat,
     generation: {
-      temperature: preset.temperature ?? 0.7,
-      maxTokens:   preset.maxTokens   ?? 1000,
+      temperature: Math.min(Math.max(preset.temperature ?? 0.7, 0.0), 1.0),
+      maxTokens:   preset.maxTokens ?? 1000,
     },
   };
 }
@@ -85,9 +83,9 @@ function buildTransformSpec(preset) {
 // ═══════════════════════════════════════════════════════════
 
 const anthropicAdapter = {
-  async send(spec, inputText, apiKey) {
+  async send(spec, inputText, apiKey, model) {
     const body = {
-      model:       this.model,
+      model,
       max_tokens:  spec.generation.maxTokens,
       temperature: spec.generation.temperature,
       system:      spec.instruction,
@@ -111,9 +109,9 @@ const anthropicAdapter = {
 };
 
 const openaiAdapter = {
-  async send(spec, inputText, apiKey) {
+  async send(spec, inputText, apiKey, model) {
     const body = {
-      model:       this.model,
+      model,
       temperature: spec.generation.temperature,
       max_tokens:  spec.generation.maxTokens,
       messages: [
@@ -142,7 +140,7 @@ const openaiAdapter = {
 };
 
 const geminiAdapter = {
-  async send(spec, inputText, apiKey) {
+  async send(spec, inputText, apiKey, model) {
     const generationConfig = {
       temperature:     spec.generation.temperature,
       maxOutputTokens: spec.generation.maxTokens,
@@ -158,7 +156,7 @@ const geminiAdapter = {
       generationConfig,
     };
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const res = await fetch(url, {
       method: 'POST',
@@ -193,7 +191,15 @@ async function parseHttpError(res) {
 
 function normalizeResponse(text, spec) {
   if (!text) return 'ERROR: empty response';
-  return text.trim();
+  const trimmed = text.trim();
+  if (spec.outputFormat === 'json') {
+    try {
+      JSON.parse(trimmed);
+    } catch {
+      return 'ERROR: invalid JSON returned\n\n' + trimmed;
+    }
+  }
+  return trimmed;
 }
 
 
@@ -449,8 +455,7 @@ $convertBtn.addEventListener('click', async () => {
 
   try {
     const spec   = buildTransformSpec(preset);
-    adapter.model = preset.model;
-    const raw    = await adapter.send(spec, text, apiKey);
+    const raw    = await adapter.send(spec, text, apiKey, preset.model);
     const result = normalizeResponse(raw, spec);
     setOutput(result, '');
     $statusState.textContent = 'DONE';
@@ -513,7 +518,10 @@ $presetTemp.addEventListener('input', () => {
 $saveNewBtn.addEventListener('click', () => {
   const data = getFormData();
   const now  = Date.now();
-  const newPreset = { id: crypto.randomUUID(), ...data, createdAt: now, updatedAt: now };
+  const id = typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+  const newPreset = { id, ...data, createdAt: now, updatedAt: now };
   presets.push(newPreset);
   savePresetsToStorage();
   renderPresetDropdown();
