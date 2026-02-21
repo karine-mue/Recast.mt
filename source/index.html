@@ -110,8 +110,47 @@
         </div>
 
         <div class="field">
-          <label>system prompt</label>
-          <textarea id="preset-system" placeholder="非人格的変換器として機能する。&#10;一人称・評価語・感情語・末尾質問を禁止。&#10;入力の意味領域を超えない。新規主張を追加しない。"></textarea>
+          <div class="mode-section-label">transform_mode</div>
+          <div class="mode-cat">— structural</div>
+          <div class="mode-grid">
+            <button class="mode-btn" data-mode="summarize">summarize</button>
+            <button class="mode-btn" data-mode="expand">expand</button>
+            <button class="mode-btn" data-mode="outline">outline</button>
+            <button class="mode-btn active" data-mode="bulletize">bulletize</button>
+            <button class="mode-btn" data-mode="compress">compress</button>
+            <button class="mode-btn" data-mode="formalize">formalize</button>
+            <button class="mode-btn" data-mode="simplify">simplify</button>
+            <button class="mode-btn" data-mode="abstract">abstract</button>
+          </div>
+          <div class="mode-cat">— semantic</div>
+          <div class="mode-grid">
+            <button class="mode-btn" data-mode="extract_claims">extract_claims</button>
+            <button class="mode-btn" data-mode="extract_assumptions">extract_assumptions</button>
+            <button class="mode-btn" data-mode="extract_structure">extract_structure</button>
+            <button class="mode-btn" data-mode="remove_evaluation">remove_evaluation</button>
+            <button class="mode-btn" data-mode="neutralize">neutralize</button>
+            <button class="mode-btn" data-mode="invert">invert</button>
+          </div>
+          <div class="mode-cat">— format</div>
+          <div class="mode-grid">
+            <button class="mode-btn" data-mode="json">json</button>
+            <button class="mode-btn" data-mode="yaml">yaml</button>
+            <button class="mode-btn" data-mode="table">table</button>
+            <button class="mode-btn" data-mode="pseudo_code">pseudo_code</button>
+          </div>
+          <div class="mode-cat">— language</div>
+          <div class="mode-grid">
+            <button class="mode-btn" data-mode="translate">translate</button>
+          </div>
+          <div class="selected-mode-display">mode: <span id="selected-mode-label">bulletize</span></div>
+        </div>
+
+        <div class="field">
+          <label>output language</label>
+          <select id="preset-language">
+            <option value="ja">日本語</option>
+            <option value="en">English</option>
+          </select>
         </div>
 
         <div class="field">
