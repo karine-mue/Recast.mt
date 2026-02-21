@@ -226,10 +226,11 @@ const MODELS = {
     'gpt-3.5-turbo',
   ],
   gemini: [
-    'gemini-2.0-flash',
-    'gemini-2.0-flash-lite',
-    // 'gemini-1.5-pro',   // 404 — エンドポイント要確認
-    // 'gemini-1.5-flash', // 404 — エンドポイント要確認
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.5-pro',
+    // 'gemini-2.0-flash',      // 2026/6シャットダウン予定、新規キー制限あり
+    // 'gemini-2.0-flash-lite', // 同上
   ],
 };
 
