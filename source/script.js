@@ -295,9 +295,10 @@ const $presetTempVal  = document.getElementById('preset-temp-val');
 const $presetTokens   = document.getElementById('preset-tokens');
 const $selectedModeLabel = document.getElementById('selected-mode-label');
 
-const $saveNewBtn     = document.getElementById('preset-save-new');
-const $overwriteBtn   = document.getElementById('preset-overwrite');
-const $deleteBtn      = document.getElementById('preset-delete');
+const $saveNewBtn          = document.getElementById('preset-save-new');
+const $overwriteBtn        = document.getElementById('preset-overwrite');
+const $deleteBtn           = document.getElementById('preset-delete');
+const $settingsPresetSelect = document.getElementById('settings-preset-select');
 
 
 // ═══════════════════════════════════════════════════════════
@@ -328,11 +329,14 @@ function init() {
 function renderPresetDropdown() {
   const current = $preset.value;
   $preset.innerHTML = '<option value="">— no preset —</option>';
+  $settingsPresetSelect.innerHTML = '<option value="">— select to load —</option>';
   presets.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = p.name;
-    $preset.appendChild(opt);
+    const opt1 = document.createElement('option');
+    opt1.value = p.id; opt1.textContent = p.name;
+    $preset.appendChild(opt1);
+    const opt2 = document.createElement('option');
+    opt2.value = p.id; opt2.textContent = p.name;
+    $settingsPresetSelect.appendChild(opt2);
   });
   if (current && presets.find(p => p.id === current)) $preset.value = current;
   updateStatusPreset();
@@ -495,8 +499,17 @@ $settingsBtn.addEventListener('click', () => {
   $gemKey.value = localStorage.getItem(GEM_KEY_STORE) || '';
   if (currentPresetId) loadPresetIntoForm(currentPresetId);
   else clearPresetForm();
+  $settingsPresetSelect.value = currentPresetId || '';
   updatePresetActionBtns();
   $settingsModal.classList.add('open');
+});
+
+$settingsPresetSelect.addEventListener('change', () => {
+  const id = $settingsPresetSelect.value;
+  if (!id) return;
+  selectPreset(id);
+  loadPresetIntoForm(id);
+  $preset.value = id;
 });
 
 $modalClose.addEventListener('click', () => $settingsModal.classList.remove('open'));
