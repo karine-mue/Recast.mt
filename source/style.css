@@ -17,13 +17,17 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-html, body {
-  height: 100%;
+html {
+  background: var(--bg);
+}
+
+body {
   background: var(--bg);
   color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 14px;
-  overscroll-behavior: none;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ── HEADER ── */
@@ -64,8 +68,7 @@ html, body {
 /* ── MAIN ── */
 #main {
   padding-top: calc(64px + var(--safe-t));
-  padding-bottom: calc(80px + var(--safe-b));
-  min-height: 100%;
+  padding-bottom: calc(90px + var(--safe-b));
   display: flex;
   flex-direction: column;
   gap: 0;
