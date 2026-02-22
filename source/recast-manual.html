@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recast.mt — 取扱説明書</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,700;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #000000;
+    --surface: #0a0a0a;
+    --border:  #1e1e1e;
+    --border-hi: #333;
+    --text:    #d8d8d8;
+    --dim:     #666;
+    --accent:  #e0e0e0;
+    --mark:    #2a2a2a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { background: var(--bg); }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.85;
+    min-height: 100vh;
+  }
+
+  /* ── LAYOUT ── */
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 80px 24px 120px;
+  }
+
+  /* ── HEADER ── */
+  .doc-header {
+    border-bottom: 1px solid var(--border-hi);
+    padding-bottom: 40px;
+    margin-bottom: 64px;
+  }
+
+  .doc-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .doc-subtitle {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    margin-bottom: 56px;
+  }
+
+  .section-id {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── BODY TEXT ── */
+  p {
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  p:last-child { margin-bottom: 0; }
+
+  /* ── DEFINITION LIST ── */
+  .def-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--border);
+  }
+
+  .def-item {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .def-item:last-child { border-bottom: none; }
+
+  .def-key {
+    padding: 12px 16px;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: flex-start;
+    padding-top: 14px;
+  }
+
+  .def-val {
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  .def-val code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: var(--mark);
+    padding: 1px 5px;
+  }
+
+  /* ── STEP LIST ── */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--border);
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .step-body {
+    padding: 14px 18px;
+  }
+
+  .step-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .step-desc {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .step-desc code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: var(--mark);
+    padding: 1px 5px;
+  }
+
+  /* ── MODE TABLE ── */
+  .mode-table {
+    border: 1px solid var(--border);
+    width: 100%;
+  }
+
+  .mode-cat-header {
+    padding: 8px 14px;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    text-transform: uppercase;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mode-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mode-row:last-child { border-bottom: none; }
+
+  .mode-name {
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--accent);
+    border-right: 1px solid var(--border);
+    letter-spacing: 0.03em;
+  }
+
+  .mode-desc {
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+
+  /* ── NOTE BOX ── */
+  .note {
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--border-hi);
+    padding: 14px 18px;
+    margin-top: 20px;
+    background: var(--surface);
+  }
+
+  .note-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .note p {
+    font-size: 12px;
+    color: var(--dim);
+    margin: 0;
+  }
+
+  /* ── FOOTER ── */
+  .doc-footer {
+    border-top: 1px solid var(--border);
+    padding-top: 32px;
+    margin-top: 80px;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* ── MOBILE ── */
+  @media (max-width: 600px) {
+    .container { padding: 48px 16px 80px; }
+    .def-item { grid-template-columns: 1fr; }
+    .def-key { border-right: none; border-bottom: 1px solid var(--border); }
+    .mode-row { grid-template-columns: 1fr; }
+    .mode-name { border-right: none; border-bottom: 1px solid var(--border); }
+    .doc-footer { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div class="doc-title">Recast.mt</div>
+    <div class="doc-subtitle">取扱説明書 — v2 / 2026</div>
+  </div>
+
+  <!-- 01 概要 -->
+  <div class="section">
+    <div class="section-id">01</div>
+    <div class="section-title">このアプリについて</div>
+    <p>Recast.mt は、LLMを「対話AI」としてではなく「純粋な変換関数」として使うためのツールです。</p>
+    <p>自然言語でタスクを指示するかわりに、変換モードとパラメータを選択します。プリセットとして保存しておけば、同じ変換を1タップで再実行できます。</p>
+    <p>Anthropic / OpenAI / Gemini の3プロバイダに対応しています。APIキーを持っていれば、どのプロバイダでも使えます。</p>
+  </div>
+
+  <!-- 02 前提条件 -->
+  <div class="section">
+    <div class="section-id">02</div>
+    <div class="section-title">前提条件</div>
+    <div class="def-list">
+      <div class="def-item">
+        <div class="def-key">APIキー</div>
+        <div class="def-val">OpenAI / Anthropic / Gemini のいずれか1つ以上のAPIキーが必要です。キーはブラウザのlocalStorageにのみ保存されます。外部サーバーへの送信はありません。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">ブラウザ</div>
+        <div class="def-val">Chrome / Safari / Firefox の最新版を推奨します。スマホからも使えます。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">PWAインストール</div>
+        <div class="def-val">ホーム画面に追加するとアプリとして起動できます。必須ではありません。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">課金状態</div>
+        <div class="def-val">APIキーが有効で、各プロバイダのAPI利用が有効になっている必要があります。無料枠でも使えます（制限あり）。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 初期設定 -->
+  <div class="section">
+    <div class="section-id">03</div>
+    <div class="section-title">初期設定</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <div class="step-label">APIキーを設定する</div>
+          <p class="step-desc">右上の <code>⚙</code> を開き、<code>API KEYS</code> セクションに使用するプロバイダのAPIキーを入力して <code>save keys</code> を押します。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <div class="step-label">プリセットを作成する</div>
+          <p class="step-desc">同じ設定画面の <code>PRESET</code> セクションで、名前・プロバイダ・モデル・変換モード・出力言語・パラメータを設定し、<code>save new</code> を押します。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <div class="step-label">変換を実行する</div>
+          <p class="step-desc">設定を閉じてメイン画面に戻り、プリセットを選択 → INPUT に変換対象テキストを入力 → <code>CONVERT</code> を押します。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 プリセット操作 -->
+  <div class="section">
+    <div class="section-id">04</div>
+    <div class="section-title">プリセット操作</div>
+    <div class="def-list">
+      <div class="def-item">
+        <div class="def-key">load preset</div>
+        <div class="def-val">設定画面上部のセレクトから既存のプリセットを読み込みます。選択するとフォームに設定が反映されます。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">— new preset —</div>
+        <div class="def-val">フォームをデフォルト値にリセットします。新しいプリセットを一から作るときに使います。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">save new</div>
+        <div class="def-val">現在のフォーム内容を新規プリセットとして保存します。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">overwrite</div>
+        <div class="def-val">選択中のプリセットを現在のフォーム内容で上書きします。パラメータを微調整して保存し直すときに使います。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">delete</div>
+        <div class="def-val">選択中のプリセットを削除します。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 05 変換モード -->
+  <div class="section">
+    <div class="section-id">05</div>
+    <div class="section-title">変換モード一覧</div>
+
+    <div class="mode-table">
+      <div class="mode-cat-header">— structural</div>
+      <div class="mode-row"><div class="mode-name">summarize</div><div class="mode-desc">主要情報を抽出して短縮</div></div>
+      <div class="mode-row"><div class="mode-name">expand</div><div class="mode-desc">各要素を詳細に展開</div></div>
+      <div class="mode-row"><div class="mode-name">outline</div><div class="mode-desc">階層的なアウトライン構造に変換</div></div>
+      <div class="mode-row"><div class="mode-name">bulletize</div><div class="mode-desc">箇条書きに変換（評価語なし）</div></div>
+      <div class="mode-row"><div class="mode-name">compress</div><div class="mode-desc">最小語数で意味を保持</div></div>
+      <div class="mode-row"><div class="mode-name">formalize</div><div class="mode-desc">形式的・公式な文体に変換</div></div>
+      <div class="mode-row"><div class="mode-name">simplify</div><div class="mode-desc">平易な語彙と構造に変換</div></div>
+      <div class="mode-row"><div class="mode-name">abstract</div><div class="mode-desc">具体的詳細を除去して抽象化</div></div>
+
+      <div class="mode-cat-header">— semantic</div>
+      <div class="mode-row"><div class="mode-name">extract_claims</div><div class="mode-desc">明示・暗示の主張を列挙</div></div>
+      <div class="mode-row"><div class="mode-name">extract_assumptions</div><div class="mode-desc">前提として置かれている事柄を列挙</div></div>
+      <div class="mode-row"><div class="mode-name">extract_structure</div><div class="mode-desc">論理構造・関係性を記述</div></div>
+      <div class="mode-row"><div class="mode-name">remove_evaluation</div><div class="mode-desc">評価語・感情語を除去して事実記述のみ残す</div></div>
+      <div class="mode-row"><div class="mode-name">neutralize</div><div class="mode-desc">立場・価値判断を除去して中立化</div></div>
+      <div class="mode-row"><div class="mode-name">invert</div><div class="mode-desc">論旨・立場を反転</div></div>
+
+      <div class="mode-cat-header">— format</div>
+      <div class="mode-row"><div class="mode-name">json</div><div class="mode-desc">JSON形式に変換（APIレベルでJSON強制）</div></div>
+      <div class="mode-row"><div class="mode-name">yaml</div><div class="mode-desc">YAML形式に変換</div></div>
+      <div class="mode-row"><div class="mode-name">table</div><div class="mode-desc">Markdownテーブル形式に変換</div></div>
+      <div class="mode-row"><div class="mode-name">markdown</div><div class="mode-desc">Markdown形式に変換</div></div>
+      <div class="mode-row"><div class="mode-name">pseudo_code</div><div class="mode-desc">疑似コード形式に変換</div></div>
+
+      <div class="mode-cat-header">— language</div>
+      <div class="mode-row"><div class="mode-name">translate</div><div class="mode-desc">指定言語に翻訳（output languageで言語を指定）</div></div>
+    </div>
+  </div>
+
+  <!-- 06 パラメータ -->
+  <div class="section">
+    <div class="section-id">06</div>
+    <div class="section-title">パラメータ</div>
+    <div class="def-list">
+      <div class="def-item">
+        <div class="def-key">provider</div>
+        <div class="def-val">使用するLLMプロバイダ。<code>anthropic</code> / <code>openai</code> / <code>gemini</code> から選択。対応するAPIキーが設定されている必要があります。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">model</div>
+        <div class="def-val">使用するモデル。providerを変えると選択肢が更新されます。構造変換用途では軽量モデルの方が指示に忠実な傾向があります。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">output language</div>
+        <div class="def-val"><code>日本語</code> / <code>English</code> を選択。translateモードではこの設定が翻訳先言語になります。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">temperature</div>
+        <div class="def-val">出力のランダム性。<code>0.0</code>〜<code>1.0</code>。構造変換・JSON変換には低め（0.1〜0.3）、創造的な変換には高め（0.7〜1.0）が向いています。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">max_tokens</div>
+        <div class="def-val">最大出力トークン数。長いテキストを扱う場合は増やしてください。デフォルトは1000。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 07 既知の制限 -->
+  <div class="section">
+    <div class="section-id">07</div>
+    <div class="section-title">既知の制限</div>
+    <div class="def-list">
+      <div class="def-item">
+        <div class="def-key">Anthropic</div>
+        <div class="def-val">ブラウザから直接APIを叩くとCORSエラーになります。Cloudflare Workersのプロキシ設定が必要です。設定済みの場合のみ使用可能。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">Gemini 2.5-pro</div>
+        <div class="def-val">JSONモードで空レスポンスが返ることがあります。max_tokensを増やすか、モードを変えて再試行してください。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">APIキーの保管</div>
+        <div class="def-val">localStorageに平文で保存されます。共用端末での使用は推奨しません。</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">会話履歴</div>
+        <div class="def-val">このアプリは1回の変換ごとにステートレスな呼び出しを行います。前回の変換結果を参照した変換はできません。</div>
+      </div>
+    </div>
+
+    <div class="note">
+      <div class="note-label">設計上の意図</div>
+      <p>このアプリはLLMを「対話相手」として扱いません。入力テキストを指定された形式に変換する関数として扱います。ペルソナ・共感・継続誘導は意図的に排除されています。</p>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <span>Recast.mt — machine transform</span>
+    <span>MIT License — fork OK</span>
+  </div>
+
+</div>
+</body>
+</html>

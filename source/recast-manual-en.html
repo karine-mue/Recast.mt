@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recast.mt — Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,700;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #000000;
+    --surface: #0a0a0a;
+    --border:  #1e1e1e;
+    --border-hi: #333;
+    --text:    #d8d8d8;
+    --dim:     #666;
+    --accent:  #e0e0e0;
+    --mark:    #2a2a2a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { background: var(--bg); }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.85;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 80px 24px 120px;
+  }
+
+  .doc-header {
+    border-bottom: 1px solid var(--border-hi);
+    padding-bottom: 40px;
+    margin-bottom: 64px;
+  }
+
+  .doc-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .doc-subtitle {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+  }
+
+  .section {
+    margin-bottom: 56px;
+  }
+
+  .section-id {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  p {
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  p:last-child { margin-bottom: 0; }
+
+  .def-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--border);
+  }
+
+  .def-item {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .def-item:last-child { border-bottom: none; }
+
+  .def-key {
+    padding: 12px 16px;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: flex-start;
+    padding-top: 14px;
+  }
+
+  .def-val {
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  .def-val code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: var(--mark);
+    padding: 1px 5px;
+  }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--border);
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step:last-child { border-bottom: none; }
+
+  .step-num {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .step-body {
+    padding: 14px 18px;
+  }
+
+  .step-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .step-desc {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  .step-desc code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: var(--mark);
+    padding: 1px 5px;
+  }
+
+  .mode-table {
+    border: 1px solid var(--border);
+    width: 100%;
+  }
+
+  .mode-cat-header {
+    padding: 8px 14px;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    text-transform: uppercase;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mode-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mode-row:last-child { border-bottom: none; }
+
+  .mode-name {
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--accent);
+    border-right: 1px solid var(--border);
+    letter-spacing: 0.03em;
+  }
+
+  .mode-desc {
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+
+  .note {
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--border-hi);
+    padding: 14px 18px;
+    margin-top: 20px;
+    background: var(--surface);
+  }
+
+  .note-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .note p {
+    font-size: 12px;
+    color: var(--dim);
+    margin: 0;
+  }
+
+  .doc-footer {
+    border-top: 1px solid var(--border);
+    padding-top: 32px;
+    margin-top: 80px;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .container { padding: 48px 16px 80px; }
+    .def-item { grid-template-columns: 1fr; }
+    .def-key { border-right: none; border-bottom: 1px solid var(--border); }
+    .mode-row { grid-template-columns: 1fr; }
+    .mode-name { border-right: none; border-bottom: 1px solid var(--border); }
+    .doc-footer { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div class="doc-title">Recast.mt</div>
+    <div class="doc-subtitle">Manual — v2 / 2026</div>
+  </div>
+
+  <!-- 01 Overview -->
+  <div class="section">
+    <div class="section-id">01</div>
+    <div class="section-title">Overview</div>
+    <p>Recast.mt is a tool for using LLMs as pure transformation functions rather than conversational agents.</p>
+    <p>Instead of instructing an AI in natural language each time, you select a transform mode and configure parameters. Save them as a preset and re-run the same transformation in one tap.</p>
+    <p>Supports three providers: Anthropic, OpenAI, and Gemini. Any provider works as long as you have a valid API key.</p>
+  </div>
+
+  <!-- 02 Requirements -->
+  <div class="section">
+    <div class="section-id">02</div>
+    <div class="section-title">Requirements</div>
+    <div class="def-list">
+      <div class="def-item">
+        <div class="def-key">API key</div>
+        <div class="def-val">At least one API key from OpenAI, Anthropic, or Gemini is required. Keys are stored only in the browser's localStorage — never sent to any external server.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">Browser</div>
+        <div class="def-val">Latest Chrome, Safari, or Firefox recommended. Works on mobile.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">PWA install</div>
+        <div class="def-val">Add to home screen to launch as a standalone app. Optional.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">Billing</div>
+        <div class="def-val">Your API key must be active and API access enabled with the provider. Free tier works within usage limits.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 Getting Started -->
+  <div class="section">
+    <div class="section-id">03</div>
+    <div class="section-title">Getting Started</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <div class="step-label">Set your API key</div>
+          <p class="step-desc">Tap <code>⚙</code> in the top right, enter your API key in the <code>API KEYS</code> section, then press <code>save keys</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <div class="step-label">Create a preset</div>
+          <p class="step-desc">In the same settings screen, scroll to <code>PRESET</code>. Set a name, provider, model, transform mode, output language, and parameters. Press <code>save new</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <div class="step-label">Run a conversion</div>
+          <p class="step-desc">Close settings. Select your preset from the dropdown, paste text into INPUT, then press <code>CONVERT</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 Preset Operations -->
+  <div class="section">
+    <div class="section-id">04</div>
+    <div class="section-title">Preset Operations</div>
+    <div class="def-list">
+      <div class="def-item">
+        <div class="def-key">load preset</div>
+        <div class="def-val">Select an existing preset from the dropdown at the top of the settings screen. The form is populated with its values immediately.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">— new preset —</div>
+        <div class="def-val">Resets the form to default values. Use this to start building a new preset from scratch.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">save new</div>
+        <div class="def-val">Saves the current form as a new preset.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">overwrite</div>
+        <div class="def-val">Overwrites the currently selected preset with the current form values. Useful for tweaking parameters and saving the updated version.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">delete</div>
+        <div class="def-val">Deletes the currently selected preset.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 05 Transform Modes -->
+  <div class="section">
+    <div class="section-id">05</div>
+    <div class="section-title">Transform Modes</div>
+
+    <div class="mode-table">
+      <div class="mode-cat-header">— structural</div>
+      <div class="mode-row"><div class="mode-name">summarize</div><div class="mode-desc">Extract key information and shorten</div></div>
+      <div class="mode-row"><div class="mode-name">expand</div><div class="mode-desc">Elaborate each element in detail</div></div>
+      <div class="mode-row"><div class="mode-name">outline</div><div class="mode-desc">Convert to hierarchical outline structure</div></div>
+      <div class="mode-row"><div class="mode-name">bulletize</div><div class="mode-desc">Convert to bullet points (no evaluative language)</div></div>
+      <div class="mode-row"><div class="mode-name">compress</div><div class="mode-desc">Preserve meaning with minimum words</div></div>
+      <div class="mode-row"><div class="mode-name">formalize</div><div class="mode-desc">Convert to formal or official register</div></div>
+      <div class="mode-row"><div class="mode-name">simplify</div><div class="mode-desc">Convert to plain vocabulary and structure</div></div>
+      <div class="mode-row"><div class="mode-name">abstract</div><div class="mode-desc">Remove specific details and abstract</div></div>
+
+      <div class="mode-cat-header">— semantic</div>
+      <div class="mode-row"><div class="mode-name">extract_claims</div><div class="mode-desc">List explicit and implicit claims</div></div>
+      <div class="mode-row"><div class="mode-name">extract_assumptions</div><div class="mode-desc">List underlying assumptions</div></div>
+      <div class="mode-row"><div class="mode-name">extract_structure</div><div class="mode-desc">Describe logical structure and relationships</div></div>
+      <div class="mode-row"><div class="mode-name">remove_evaluation</div><div class="mode-desc">Strip evaluative and emotional language, keep factual statements only</div></div>
+      <div class="mode-row"><div class="mode-name">neutralize</div><div class="mode-desc">Remove stance and value judgments, convert to neutral description</div></div>
+      <div class="mode-row"><div class="mode-name">invert</div><div class="mode-desc">Reverse the argument or position</div></div>
+
+      <div class="mode-cat-header">— format</div>
+      <div class="mode-row"><div class="mode-name">json</div><div class="mode-desc">Convert to JSON (JSON enforced at API level)</div></div>
+      <div class="mode-row"><div class="mode-name">yaml</div><div class="mode-desc">Convert to YAML</div></div>
+      <div class="mode-row"><div class="mode-name">table</div><div class="mode-desc">Convert to Markdown table</div></div>
+      <div class="mode-row"><div class="mode-name">markdown</div><div class="mode-desc">Convert to Markdown format</div></div>
+      <div class="mode-row"><div class="mode-name">pseudo_code</div><div class="mode-desc">Convert to pseudocode</div></div>
+
+      <div class="mode-cat-header">— language</div>
+      <div class="mode-row"><div class="mode-name">translate</div><div class="mode-desc">Translate to the language specified in output language</div></div>
+    </div>
+  </div>
+
+  <!-- 06 Parameters -->
+  <div class="section">
+    <div class="section-id">06</div>
+    <div class="section-title">Parameters</div>
+    <div class="def-list">
+      <div class="def-item">
+        <div class="def-key">provider</div>
+        <div class="def-val">The LLM provider to use: <code>anthropic</code>, <code>openai</code>, or <code>gemini</code>. The corresponding API key must be set.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">model</div>
+        <div class="def-val">The model to use. Options update when the provider is changed. For structural transformations, lighter models tend to follow instructions more literally.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">output language</div>
+        <div class="def-val"><code>日本語</code> or <code>English</code>. In translate mode, this setting determines the target language.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">temperature</div>
+        <div class="def-val">Output randomness. Range: <code>0.0</code>–<code>1.0</code>. Lower values (0.1–0.3) work well for structural and JSON conversions. Higher values (0.7–1.0) suit creative transformations. Default: 0.7.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">max_tokens</div>
+        <div class="def-val">Maximum output token count. Increase for longer input texts. Default: 1000.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 07 Known Limitations -->
+  <div class="section">
+    <div class="section-id">07</div>
+    <div class="section-title">Known Limitations</div>
+    <div class="def-list">
+      <div class="def-item">
+        <div class="def-key">Anthropic</div>
+        <div class="def-val">Direct browser requests to the Anthropic API are blocked by CORS. A Cloudflare Workers proxy must be configured separately for Anthropic to work.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">Gemini 2.5-pro</div>
+        <div class="def-val">May return empty responses in JSON mode. Try increasing max_tokens or switching to a different mode and retrying.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">API key storage</div>
+        <div class="def-val">Keys are stored as plain text in localStorage. Not recommended on shared devices.</div>
+      </div>
+      <div class="def-item">
+        <div class="def-key">Conversation history</div>
+        <div class="def-val">Each conversion is a stateless, single-shot API call. The output of a previous conversion cannot be referenced in the next one.</div>
+      </div>
+    </div>
+
+    <div class="note">
+      <div class="note-label">Design intent</div>
+      <p>This app does not treat LLMs as conversational partners. It treats them as transformation functions applied to input text. Persona, empathy, and continuation prompts are intentionally absent.</p>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <span>Recast.mt — machine transform</span>
+    <span>MIT License — fork OK</span>
+  </div>
+
+</div>
+</body>
+</html>
