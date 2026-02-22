@@ -160,9 +160,9 @@ type TransformSpec = {
 
 - ​OpenAI Adapter: messages 配列にて role: "system" と role: "user" を分離。response_format: { type: "json_object" } による構造化。
 
-​Anthropic Adapter: トップレベルの system パラメータに instruction をマッピング。
+- ​Anthropic Adapter: トップレベルの system パラメータに instruction をマッピング。
 
-​Gemini Adapter: systemInstruction パラメータによる指示の分離。responseMimeType: "application/json" による厳格な出力形式の固定。
+- ​Gemini Adapter: systemInstruction パラメータによる指示の分離。responseMimeType: "application/json" による厳格な出力形式の固定。
 
 ### ​3. 実行フロー (1-shot Stateless)
 ​会話履歴を用いた文脈の汚染を排除し、単一の要求と応答のみで処理を完結させる。
