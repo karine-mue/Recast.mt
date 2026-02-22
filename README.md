@@ -166,4 +166,6 @@ type TransformSpec = {
 
 ### ​3. 実行フロー (1-shot Stateless)
 ​会話履歴を用いた文脈の汚染を排除し、単一の要求と応答のみで処理を完結させる。
+```
 ​UI → State → buildTransformSpec() → providerAdapter.send(spec, input) → API → normalizeResponse() → UI
+```
