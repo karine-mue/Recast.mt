@@ -269,6 +269,19 @@
   }
 
   /* ── MOBILE ── */
+
+  .back-link {
+    display: inline-block;
+    margin-bottom: 40px;
+    font-size: 11px;
+    color: var(--dim);
+    text-decoration: none;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .back-link:hover { color: var(--accent); border-color: var(--border-hi); }
   @media (max-width: 600px) {
     .container { padding: 48px 16px 80px; }
     .def-item { grid-template-columns: 1fr; }
@@ -281,6 +294,8 @@
 </head>
 <body>
 <div class="container">
+
+  <a href="./" class="back-link">← Recast.mt に戻る</a>
 
   <!-- HEADER -->
   <div class="doc-header">
