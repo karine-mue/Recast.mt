@@ -517,6 +517,19 @@ $settingsPresetSelect.addEventListener('change', () => {
   $preset.value = id;
 });
 
+
+const $helpBtn   = document.getElementById('help-btn');
+const $helpPopup = document.getElementById('help-popup');
+
+$helpBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  $helpPopup.classList.toggle('open');
+});
+
+document.addEventListener('click', () => {
+  $helpPopup.classList.remove('open');
+});
+
 $modalClose.addEventListener('click', () => $settingsModal.classList.remove('open'));
 $settingsModal.addEventListener('click', e => {
   if (e.target === $settingsModal) $settingsModal.classList.remove('open');
