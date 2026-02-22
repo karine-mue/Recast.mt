@@ -136,3 +136,34 @@ MIT
 - Presetエクスポート / インポート（JSON）
 - パイプライン処理（複数変換の順次適用）
 - モデル一覧API自動取得
+
+---
+
+## Architecture v2: TransformSpec & Adapter Pattern
+
+Recast.mtは「非対話変換エンジン」としての構造を明確化するため、UI層とAPI層を分離するアーキテクチャ（v2）へ移行した。LLMは履歴・人格・会話状態を持たない状態変換関数（$f(x) = y$）として扱われる。
+
+### 1. TransformSpec (抽象化構造)
+UIからの入力および設定値は、プロバイダに依存しない共通フォーマット `TransformSpec` に集約される。
+
+```typescript
+type TransformSpec = {
+  mode: string
+  instruction: string
+  outputLanguage: string
+  outputFormat: "text" | "json"
+  generation: { temperature: number, maxTokens: number }
+}
+```
+### 2. Adapter Layer (プロバイダ間差異の吸収)
+​TransformSpec を各社APIのネイティブ構造へ射影する。この層により「System Promptの分離」と「JSON出力の強制」をプロバイダごとに個別に適用する。
+
+- ​OpenAI Adapter: messages 配列にて role: "system" と role: "user" を分離。response_format: { type: "json_object" } による構造化。
+
+​Anthropic Adapter: トップレベルの system パラメータに instruction をマッピング。
+
+​Gemini Adapter: systemInstruction パラメータによる指示の分離。responseMimeType: "application/json" による厳格な出力形式の固定。
+
+### ​3. 実行フロー (1-shot Stateless)
+​会話履歴を用いた文脈の汚染を排除し、単一の要求と応答のみで処理を完結させる。
+​UI → State → buildTransformSpec() → providerAdapter.send(spec, input) → API → normalizeResponse() → UI
