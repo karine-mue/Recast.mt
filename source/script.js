@@ -214,11 +214,11 @@ const ANT_KEY_STORE = 'anthropic_api_key';
 const GEM_KEY_STORE = 'gemini_api_key';
 
 const MODELS = {
-  // anthropic: [  // CORS未解決 — 帰宅後にWorker設定で有効化
-  //   'claude-opus-4-5',
-  //   'claude-sonnet-4-5',
-  //   'claude-haiku-4-5-20251001',
-  // ],
+   anthropic: [
+     'claude-opus-4-5',
+     'claude-sonnet-4-5',
+     'claude-haiku-4-5-20251001',
+   ],
   openai: [
     'gpt-4o',
     'gpt-4o-mini',
