@@ -93,7 +93,7 @@ const anthropicAdapter = {
       messages:    [{ role: 'user', content: inputText }],
     };
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://recast-anthropic-proxy.karine-mue80.workers.dev/', {
       method: 'POST',
       headers: {
         'Content-Type':    'application/json',
