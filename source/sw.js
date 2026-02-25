@@ -26,7 +26,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.url.includes('api.openai.com') ||
-      event.request.url.includes('api.anthropic.com') ||
+      event.request.url.includes('recast-anthropic-proxy.karine-mue80.workers.dev') ||
       event.request.url.includes('generativelanguage.googleapis.com')) {
     return;
   }
