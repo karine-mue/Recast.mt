@@ -232,6 +232,7 @@ const MODELS = {
     'gpt-3.5-turbo',
   ],
   gemini: [
+    'gemini-3.1-pro-preview',
     'gemini-2.5-flash',
     'gemini-2.5-flash-lite',
     'gemini-2.5-pro',
