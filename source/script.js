@@ -109,12 +109,17 @@ const anthropicAdapter = {
   },
 };
 
+const OPENAI_MAX_COMPLETION_TOKENS_MODELS = /^gpt-5/;
+
 const openaiAdapter = {
   async send(spec, inputText, apiKey, model) {
+    const maxTokensKey = OPENAI_MAX_COMPLETION_TOKENS_MODELS.test(model)
+      ? 'max_completion_tokens'
+      : 'max_tokens';
     const body = {
       model,
       temperature: spec.generation.temperature,
-      max_tokens:  spec.generation.maxTokens,
+      [maxTokensKey]: spec.generation.maxTokens,
       messages: [
         { role: 'system', content: spec.instruction },
         { role: 'user',   content: inputText },
