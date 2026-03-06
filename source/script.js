@@ -226,7 +226,7 @@ const MODELS = {
      'claude-haiku-4-5-20251001',
    ],
   openai: [
-    'gpt-5.4-pro',
+    //'gpt-5.4-pro-2026-03-05', #未提供
     'gpt-5.4',
     'gpt-4o',
     'gpt-4o-mini',
