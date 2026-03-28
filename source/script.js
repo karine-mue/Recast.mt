@@ -281,6 +281,7 @@ const MODEL_FETCHERS = {
     return (data.models || [])
       .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
       .map(m => m.name.replace('models/', ''))
+      .filter(id => /^gemini-/.test(id))   // imagen-* / embedding-* 等を除外
       .sort((a, b) => b.localeCompare(a));
   },
 };
