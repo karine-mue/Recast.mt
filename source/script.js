@@ -246,6 +246,47 @@ const MODELS = {
   ],
 };
 
+// APIからモデル一覧を取得するフェッチャー（失敗時はMODELSにフォールバック）
+const MODEL_FETCHERS = {
+  async anthropic(apiKey) {
+    const res = await fetch('https://api.anthropic.com/v1/models?limit=100', {
+      headers: {
+        'x-api-key':         apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+    });
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    return data.data.map(m => m.id).sort((a, b) => b.localeCompare(a));
+  },
+
+  async openai(apiKey) {
+    const res = await fetch('https://api.openai.com/v1/models', {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    });
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    return data.data
+      .map(m => m.id)
+      .filter(id => /^(gpt-|o\d)/.test(id))
+      .sort((a, b) => b.localeCompare(a));
+  },
+
+  async gemini(apiKey) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}&pageSize=50`
+    );
+    if (!res.ok) throw new Error('fetch failed');
+    const data = await res.json();
+    return (data.models || [])
+      .filter(m => m.supportedGenerationMethods?.includes('generateContent'))
+      .map(m => m.name.replace('models/', ''))
+      .sort((a, b) => b.localeCompare(a));
+  },
+};
+
+const modelCache = {};
+
 
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -396,16 +437,49 @@ function clearPresetForm() {
   setActiveMode('bulletize');
 }
 
-function updateModelOptions(provider, selectedModel) {
-  const models = MODELS[provider] || [];
-  if (!models.length) return; // provider未対応（コメントアウト中）
+async function updateModelOptions(provider, selectedModel) {
+  const fallback = MODELS[provider] || [];
+  const apiKeyMap = { openai: OAI_KEY_STORE, anthropic: ANT_KEY_STORE, gemini: GEM_KEY_STORE };
+  const apiKey = localStorage.getItem(apiKeyMap[provider]);
+
+  let models = fallback;
+
+  if (apiKey && MODEL_FETCHERS[provider]) {
+    if (modelCache[provider]) {
+      models = modelCache[provider];
+    } else {
+      $presetModel.disabled = true;
+      $presetModel.innerHTML = '<option>— loading… —</option>';
+      try {
+        const fetched = await MODEL_FETCHERS[provider](apiKey);
+        if (fetched.length) {
+          modelCache[provider] = fetched;
+          models = fetched;
+        }
+      } catch {
+        // フォールバックを使用
+      }
+      $presetModel.disabled = false;
+    }
+  }
+
+  if (!models.length) models = fallback;
+
   $presetModel.innerHTML = '';
   models.forEach(m => {
     const opt = document.createElement('option');
     opt.value = m; opt.textContent = m;
     $presetModel.appendChild(opt);
   });
-  if (selectedModel && models.includes(selectedModel)) {
+
+  if (selectedModel) {
+    const exists = [...$presetModel.options].some(o => o.value === selectedModel);
+    if (!exists) {
+      // 保存済みモデルがリストにない場合でも選択できるよう追加
+      const opt = document.createElement('option');
+      opt.value = selectedModel; opt.textContent = selectedModel;
+      $presetModel.insertBefore(opt, $presetModel.firstChild);
+    }
     $presetModel.value = selectedModel;
   }
 }
@@ -551,6 +625,8 @@ $saveKeysBtn.addEventListener('click', () => {
   if ($oaiKey.value.trim()) localStorage.setItem(OAI_KEY_STORE, $oaiKey.value.trim());
   if ($antKey.value.trim()) localStorage.setItem(ANT_KEY_STORE, $antKey.value.trim());
   if ($gemKey.value.trim()) localStorage.setItem(GEM_KEY_STORE, $gemKey.value.trim());
+  // キー変更時はキャッシュをクリアして次回再取得させる
+  Object.keys(modelCache).forEach(k => delete modelCache[k]);
   $saveKeysBtn.textContent = '✓ saved';
   setTimeout(() => { $saveKeysBtn.textContent = 'save keys'; }, 1500);
 });
