@@ -164,6 +164,18 @@ type TransformSpec = {
 
 - ​Gemini Adapter: systemInstruction パラメータによる指示の分離。responseMimeType: "application/json" による厳格な出力形式の固定。
 
+---
+
+### 実装メモ: Anthropicモデルと `temperature` パラメータ
+
+**Opus 4.7 以降、`temperature` / `top_p` / `top_k` はAPIから削除された（送信すると400エラー）。**
+
+Opus 4.6以前・Sonnet・Haikuは引き続き使用可能。今後の新モデルも同様の傾向が続くと思われる。
+
+`anthropicAdapter` では `ANTHROPIC_NO_TEMPERATURE_MODELS` 正規表現で対象モデルを判定し、該当する場合は `temperature` をリクエストボディから除外している。新しいAnthropicモデルを追加する際はこの挙動を確認すること。
+
+---
+
 ### ​3. 実行フロー (1-shot Stateless)
 ​会話履歴を用いた文脈の汚染を排除し、単一の要求と応答のみで処理を完結させる。
 
