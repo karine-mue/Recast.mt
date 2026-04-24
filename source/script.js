@@ -83,15 +83,20 @@ function buildTransformSpec(preset) {
 // 各Adapterの責務: spec を各社APIのネイティブ構造に射影する
 // ═══════════════════════════════════════════════════════════
 
+// Opus 4.7以降はtemperatureパラメータ非対応（送信すると400エラー）
+const ANTHROPIC_NO_TEMPERATURE_MODELS = /^claude-opus-4-7/;
+
 const anthropicAdapter = {
   async send(spec, inputText, apiKey, model) {
     const body = {
       model,
-      max_tokens:  spec.generation.maxTokens,
-      temperature: spec.generation.temperature,
-      system:      spec.instruction,
-      messages:    [{ role: 'user', content: inputText }],
+      max_tokens: spec.generation.maxTokens,
+      system:     spec.instruction,
+      messages:   [{ role: 'user', content: inputText }],
     };
+    if (!ANTHROPIC_NO_TEMPERATURE_MODELS.test(model)) {
+      body.temperature = spec.generation.temperature;
+    }
 
     const res = await fetch('https://recast-anthropic-proxy.karine-mue80.workers.dev/', {
       method: 'POST',
@@ -220,6 +225,7 @@ const GEM_KEY_STORE = 'gemini_api_key';
 
 const MODELS = {
    anthropic: [
+     'claude-opus-4-7',
      'claude-opus-4-6',
      'claude-sonnet-4-6',
      'claude-sonnet-4-5-20250929',
