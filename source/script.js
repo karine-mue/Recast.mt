@@ -115,6 +115,7 @@ const anthropicAdapter = {
 };
 
 const OPENAI_MAX_COMPLETION_TOKENS_MODELS = /^gpt-5/;
+const OPENAI_NO_TEMPERATURE_MODELS = /^gpt-5\.5/;
 
 const openaiAdapter = {
   async send(spec, inputText, apiKey, model) {
@@ -123,13 +124,16 @@ const openaiAdapter = {
       : 'max_tokens';
     const body = {
       model,
-      temperature: spec.generation.temperature,
       [maxTokensKey]: spec.generation.maxTokens,
       messages: [
         { role: 'system', content: spec.instruction },
         { role: 'user',   content: inputText },
       ],
     };
+
+    if (!OPENAI_NO_TEMPERATURE_MODELS.test(model)) {
+      body.temperature = spec.generation.temperature;
+    }
 
     if (spec.outputFormat === 'json') {
       body.response_format = { type: 'json_object' };
@@ -232,6 +236,7 @@ const MODELS = {
      'claude-haiku-4-5-20251001',
    ],
   openai: [
+    'gpt-5.5',
     //'gpt-5.4-pro-2026-03-05', #未提供
     'gpt-5.4',
     'gpt-5.4-mini',
