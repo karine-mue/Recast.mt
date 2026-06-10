@@ -110,7 +110,13 @@ const anthropicAdapter = {
 
     if (!res.ok) throw new Error(await parseHttpError(res));
     const data = await res.json();
-    return data.content?.[0]?.text || '';
+    // Fable 5等でadaptive thinkingが有効になるとcontent[0]がthinkingブロックになるため
+    // type === 'text' のブロックを走査して本文を抽出する
+    return (data.content ?? [])
+      .filter(b => b?.type === 'text' && typeof b.text === 'string')
+      .map(b => b.text)
+      .join('\n')
+      .trim() || '';
   },
 };
 
