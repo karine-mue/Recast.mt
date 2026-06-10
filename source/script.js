@@ -83,8 +83,8 @@ function buildTransformSpec(preset) {
 // 各Adapterの責務: spec を各社APIのネイティブ構造に射影する
 // ═══════════════════════════════════════════════════════════
 
-// Opus 4.7以降はtemperatureパラメータ非対応（送信すると400エラー）
-const ANTHROPIC_NO_TEMPERATURE_MODELS = /^claude-opus-4-7/;
+// Opus 4.7以降およびFable 5はtemperature/samplingパラメータ非対応（送信すると400エラー）
+const ANTHROPIC_NO_TEMPERATURE_MODELS = /^claude-opus-4-[789]|^claude-fable-/;
 
 const anthropicAdapter = {
   async send(spec, inputText, apiKey, model) {
@@ -229,6 +229,8 @@ const GEM_KEY_STORE = 'gemini_api_key';
 
 const MODELS = {
    anthropic: [
+     'claude-fable-5',
+     'claude-opus-4-8',
      'claude-opus-4-7',
      'claude-opus-4-6',
      'claude-sonnet-4-6',
