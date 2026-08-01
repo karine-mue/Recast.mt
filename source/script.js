@@ -121,7 +121,8 @@ const anthropicAdapter = {
 };
 
 const OPENAI_MAX_COMPLETION_TOKENS_MODELS = /^gpt-5/;
-const OPENAI_NO_TEMPERATURE_MODELS = /^gpt-5\.5/;
+// gpt-5.5以降はtemperature非対応（デフォルト1固定、送信すると400エラー）
+const OPENAI_NO_TEMPERATURE_MODELS = /^gpt-5\.[56]/;
 
 const openaiAdapter = {
   async send(spec, inputText, apiKey, model) {
