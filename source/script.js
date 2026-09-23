@@ -83,8 +83,10 @@ function buildTransformSpec(preset) {
 // 各Adapterの責務: spec を各社APIのネイティブ構造に射影する
 // ═══════════════════════════════════════════════════════════
 
-// Opus 4.7以降およびFable 5はtemperature/samplingパラメータ非対応（送信すると400エラー）
-const ANTHROPIC_NO_TEMPERATURE_MODELS = /^claude-opus-4-[789]|^claude-fable-/;
+// temperature/samplingパラメータ非対応（送信すると400エラー）:
+//   Opus 4.7/4.8, Opus 5/5.5, Sonnet 5, Fable 5/5.1, Mythos
+// 5世代以降は全ファミリーでsampling削除のため、claude-<family>-5以降は一律で非送信扱い。
+const ANTHROPIC_NO_TEMPERATURE_MODELS = /^claude-(?:opus-4-[789]|[a-z]+-(?:[5-9]|[1-9]\d)\b)/;
 
 const anthropicAdapter = {
   async send(spec, inputText, apiKey, model) {
@@ -112,19 +114,34 @@ const anthropicAdapter = {
     const data = await res.json();
     // Fable 5等でadaptive thinkingが有効になるとcontent[0]がthinkingブロックになるため
     // type === 'text' のブロックを走査して本文を抽出する
-    return (data.content ?? [])
+    const text = (data.content ?? [])
       .filter(b => b?.type === 'text' && typeof b.text === 'string')
       .map(b => b.text)
       .join('\n')
-      .trim() || '';
+      .trim();
+    // Fable 5.1 / Opus 5.5等は安全分類器による拒否を HTTP 200 + stop_reason: 'refusal' で返す
+    if (data.stop_reason === 'refusal') {
+      const cat = data.stop_details?.category;
+      throw new Error(`ERROR: refusal${cat ? ' — ' + cat : ''}`);
+    }
+    // thinking常時有効モデル（Opus 5.5 / Fable 5.x）はmax_tokensを思考で使い切り本文が空になりうる
+    if (!text && data.stop_reason === 'max_tokens') {
+      throw new Error('ERROR: max_tokens reached before output (thinking consumed budget) — increase max_tokens');
+    }
+    return text;
   },
 };
 
-const OPENAI_MAX_COMPLETION_TOKENS_MODELS = /^gpt-5/;
-// gpt-5.5以降はtemperature非対応（デフォルト1固定、送信すると400エラー）。
+// 推論モデル（gpt-5以降 / gpt-6-astra等 / oシリーズ）はmax_tokensを拒否しmax_completion_tokensを要求する
+const OPENAI_MAX_COMPLETION_TOKENS_MODELS = /^(?:gpt-(?:[5-9]|\d\d)|o\d)/;
+// temperature非対応（デフォルト1固定、送信すると400エラー）:
+//   - gpt-5 / gpt-5-mini / gpt-5-nano（初代gpt-5系）
+//   - gpt-5.5以降（gpt-5.6-sol/terra/luna 含む）、gpt-6-astra
+//   - oシリーズ（o1/o3/o4-mini 等）
 // 最近のモデルは温度固定の流れのため、gpt-5.5〜5.9 / gpt-6以降 は暫定で1固定扱い。
-// （gpt-5.4系までは温度対応。新モデルで対応が戻った場合はここを調整する）
-const OPENAI_NO_TEMPERATURE_MODELS = /^gpt-(5\.[5-9]|[6-9]|\d\d)/;
+// （gpt-5.1〜5.4系は温度対応。新モデルで対応が戻った場合はここを調整する）
+const OPENAI_NO_TEMPERATURE_MODELS =
+  /^(?:gpt-(?:5\.[5-9]|[6-9]|\d\d)|gpt-5(?:-mini|-nano)?(?:-\d{4}-\d{2}-\d{2})?$|o\d)/;
 
 const openaiAdapter = {
   async send(spec, inputText, apiKey, model) {
@@ -159,7 +176,14 @@ const openaiAdapter = {
 
     if (!res.ok) throw new Error(await parseHttpError(res));
     const data = await res.json();
-    return data.choices?.[0]?.message?.content || '';
+    const choice = data.choices?.[0];
+    if (choice?.message?.refusal) throw new Error(`ERROR: refusal — ${choice.message.refusal}`);
+    const content = choice?.message?.content || '';
+    // 推論モデルはmax_completion_tokensに推論トークンを含むため、本文前に上限到達しうる
+    if (!content && choice?.finish_reason === 'length') {
+      throw new Error('ERROR: max_tokens reached before output (reasoning consumed budget) — increase max_tokens');
+    }
+    return content;
   },
 };
 
@@ -238,7 +262,11 @@ const GEM_KEY_STORE = 'gemini_api_key';
 
 const MODELS = {
    anthropic: [
+     'claude-fable-5-1',
      'claude-fable-5',
+     'claude-opus-5-5',
+     'claude-opus-5',
+     'claude-sonnet-5',
      'claude-opus-4-8',
      'claude-opus-4-7',
      'claude-opus-4-6',
@@ -247,6 +275,10 @@ const MODELS = {
      'claude-haiku-4-5-20251001',
    ],
   openai: [
+    'gpt-6-astra',
+    'gpt-5.6-sol',
+    'gpt-5.6-terra',
+    'gpt-5.6-luna',
     'gpt-5.5',
     //'gpt-5.4-pro-2026-03-05', #未提供
     'gpt-5.4',
